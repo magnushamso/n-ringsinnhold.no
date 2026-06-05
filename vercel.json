@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync?secret=BYTT_MEG_UT",
+      "schedule": "0 3 1 11 *"
+    }
+  ]
+}
