@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import { getFoodBySlug } from "@/lib/db";
 import NutrientTable from "@/components/NutrientTable";
 
-interface Props { params: { slug: string } }
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const food = await getFoodBySlug(params.slug);
+  const { slug } = await params;
+  const food = await getFoodBySlug(slug);
   if (!food) return { title: "Matvare ikke funnet" };
   return {
     title: `Næringsinnhold i ${food.name_nb}`,
@@ -15,7 +16,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function FoodPage({ params }: Props) {
-  const food = await getFoodBySlug(params.slug);
+  const { slug } = await params;
+  const food = await getFoodBySlug(slug);
   if (!food) notFound();
 
   const kcal  = food.nutrients?.["Enerc_kcal"]?.value;
@@ -40,7 +42,12 @@ export default async function FoodPage({ params }: Props) {
       <main>
         <nav className="breadcrumb">
           <a href="/">Forsiden</a>
-          {food.food_group_name && (<><span>/</span><a href={`/kategori/${food.food_group_id}`}>{food.food_group_name}</a></>)}
+          {food.food_group_name && (
+            <>
+              <span>/</span>
+              <a href={`/kategori/${food.food_group_id}`}>{food.food_group_name}</a>
+            </>
+          )}
           <span>/</span>
           <span>{food.name_nb}</span>
         </nav>
@@ -69,7 +76,13 @@ export default async function FoodPage({ params }: Props) {
           <NutrientTable nutrients={food.nutrients} />
 
           <footer className="food-source">
-            <p>Kilde: <a href="https://www.matvaretabellen.no" target="_blank" rel="noopener noreferrer">Matvaretabellen</a> (Mattilsynet / UiO). Verdier per 100 g spiselig del.</p>
+            <p>
+              Kilde:{" "}
+              <a href="https://www.matvaretabellen.no" target="_blank" rel="noopener noreferrer">
+                Matvaretabellen
+              </a>{" "}
+              (Mattilsynet / UiO). Verdier per 100 g spiselig del.
+            </p>
           </footer>
         </article>
       </main>
