@@ -1,21 +1,22 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getFoodsByGroup } from "@/lib/db";
-import { db } from "@/lib/db";
+import { getFoodsByGroup, db } from "@/lib/db";
 
-interface Props { params: { id: string } }
+type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [group] = await db`SELECT name_nb FROM food_groups WHERE id = ${params.id} LIMIT 1`;
+  const { id } = await params;
+  const [group] = await db`SELECT name_nb FROM food_groups WHERE id = ${id} LIMIT 1`;
   if (!group) return { title: "Kategori ikke funnet" };
   return { title: group.name_nb as string };
 }
 
 export default async function CategoryPage({ params }: Props) {
-  const [group] = await db`SELECT name_nb FROM food_groups WHERE id = ${params.id} LIMIT 1`;
+  const { id } = await params;
+  const [group] = await db`SELECT name_nb FROM food_groups WHERE id = ${id} LIMIT 1`;
   if (!group) notFound();
 
-  const foods = await getFoodsByGroup(params.id, 200);
+  const foods = await getFoodsByGroup(id, 200);
 
   return (
     <main>
