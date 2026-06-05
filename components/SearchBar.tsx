@@ -20,7 +20,7 @@ export default function SearchBar() {
   const router = useRouter();
 
   useEffect(() => {
-    clearTimeout(debounceRef.current);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (query.trim().length < 2) {
       setResults([]);
