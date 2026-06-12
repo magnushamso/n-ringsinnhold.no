@@ -11,12 +11,10 @@ function slugify(text: string) {
     .replace(/^-+|-+$/g, "") || "ukjent";
 }
 
-// Konverter alle undefined til null (postgres.js godtar ikke undefined)
 function n(val: any): any {
   return val === undefined ? null : val;
 }
 
-// Hent ut array fra respons, uansett om den er direkte array eller {key: [...]}
 function asArray(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object") {
@@ -27,7 +25,7 @@ function asArray(data: any): any[] {
   return [];
 }
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
@@ -35,93 +33,115 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = postgres(process.env.DATABASE_URL!, {
-    ssl: "require",
-    max: 3,
-    types: {
-      // Returner null for undefined automatisk
-    },
-  });
+  // Pagination: ?offset=0&limit=300
+  const offset = parseInt(req.nextUrl.searchParams.get("offset") ?? "0");
+  const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "300");
+
+  const db = postgres(process.env.DATABASE_URL!, { ssl: "require", max: 3 });
 
   try {
-    // 1. Matvaregrupper
-    const groups = await fetch(`${BASE_URL}/food-groups.json`).then(r => r.json());
-    const groupRows: any[] = [];
-    function flatten(node: any, parentId: string | null = null) {
-      if (node.id != null) {
-        groupRows.push({
-          id: n(node.id),
-          parent_id: n(parentId),
-          name_nb: n(node.name) ?? "",
-          name_en: n(node.nameEn),
-        });
+    // Kjør grupper/næringsstoffer kun på første kall (offset=0)
+    if (offset === 0) {
+      const groups = await fetch(`${BASE_URL}/food-groups.json`).then(r => r.json());
+      const groupRows: any[] = [];
+      function flatten(node: any, parentId: string | null = null) {
+        if (node.id != null) {
+          groupRows.push({ id: n(node.id), parent_id: n(parentId), name_nb: n(node.name) ?? "", name_en: n(node.nameEn) });
+        }
+        node.children?.forEach((c: any) => flatten(c, node.id ?? parentId));
       }
-      node.children?.forEach((c: any) => flatten(c, node.id ?? parentId));
-    }
-    (Array.isArray(groups) ? groups : [groups]).forEach((g: any) => flatten(g));
+      (Array.isArray(groups) ? groups : [groups]).forEach((g: any) => flatten(g));
 
-    for (const row of groupRows.filter(r => !r.parent_id)) {
-      await db`INSERT INTO food_groups (id, parent_id, name_nb, name_en) VALUES (${row.id}, ${row.parent_id}, ${row.name_nb}, ${row.name_en}) ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb`;
-    }
-    for (const row of groupRows.filter(r => r.parent_id)) {
-      await db`INSERT INTO food_groups (id, parent_id, name_nb, name_en) VALUES (${row.id}, ${row.parent_id}, ${row.name_nb}, ${row.name_en}) ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb`;
+      for (const row of groupRows.filter(r => !r.parent_id)) {
+        await db`INSERT INTO food_groups (id, parent_id, name_nb, name_en) VALUES (${row.id}, ${row.parent_id}, ${row.name_nb}, ${row.name_en}) ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb`;
+      }
+      for (const row of groupRows.filter(r => r.parent_id)) {
+        await db`INSERT INTO food_groups (id, parent_id, name_nb, name_en) VALUES (${row.id}, ${row.parent_id}, ${row.name_nb}, ${row.name_en}) ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb`;
+      }
+
+      const nutrients = asArray(await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json()));
+      const nutRows = nutrients
+        .map((nut: any) => ({
+          id: n(nut.id ?? nut.nutrientId ?? nut.code),
+          name_nb: n(nut.name ?? nut.nutrientName) ?? "",
+          name_en: n(nut.nameEn),
+          unit: n(nut.unit),
+          decimal_places: n(nut.decimalPlaces) ?? 1,
+        }))
+        .filter((r: any) => r.id != null);
+
+      if (nutRows.length > 0) {
+        await db`
+          INSERT INTO nutrients ${db(nutRows)}
+          ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb
+        `;
+      }
     }
 
-    // 2. Næringsstoffer
-    const nutrients = asArray(await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json()));
-    for (const nut of nutrients) {
-      const nutId = n(nut.id ?? nut.nutrientId ?? nut.code);
-      if (nutId == null) continue;
-      await db`
-        INSERT INTO nutrients (id, name_nb, name_en, unit, decimal_places)
-        VALUES (${nutId}, ${n(nut.name ?? nut.nutrientName) ?? ""}, ${n(nut.nameEn)}, ${n(nut.unit)}, ${n(nut.decimalPlaces) ?? 1})
-        ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb
-      `;
-    }
+    // Matvarer (med paginering)
+    const allFoods = asArray(await fetch(`${BASE_URL}/foods.json`).then(r => r.json()));
+    const total = allFoods.length;
+    const batch = allFoods.slice(offset, offset + limit);
 
-    // 3. Matvarer
-    const foods = asArray(await fetch(`${BASE_URL}/foods.json`).then(r => r.json()));
-    let count = 0;
+    const foodRows: any[] = [];
+    const nutRows: any[] = [];
 
-    for (const f of foods) {
+    for (const f of batch) {
       const foodId = n(f.id ?? f.foodId);
       const foodName = n(f.name ?? f.foodName) ?? "";
       if (foodId == null) continue;
-      const slug = `${slugify(foodName)}-${slugify(foodId)}`;
 
-      await db`
-        INSERT INTO foods (id, slug, name_nb, name_en, food_group_id, source, source_id)
-        VALUES (
-          ${foodId},
-          ${slug},
-          ${foodName},
-          ${n(f.nameEn)},
-          ${n(f.foodGroupId)},
-          ${"matvaretabellen"},
-          ${foodId}
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          name_nb = EXCLUDED.name_nb,
-          updated_at = now()
-      `;
+      foodRows.push({
+        id: foodId,
+        slug: `${slugify(foodName)}-${slugify(foodId)}`,
+        name_nb: foodName,
+        name_en: n(f.nameEn),
+        food_group_id: n(f.foodGroupId),
+        source: "matvaretabellen",
+        source_id: foodId,
+      });
 
       for (const c of f.constituents ?? []) {
         if (!c.nutrientId) continue;
+        nutRows.push({ food_id: foodId, nutrient_id: n(c.nutrientId), value: n(c.quantity) });
+      }
+    }
+
+    if (foodRows.length > 0) {
+      await db`
+        INSERT INTO foods ${db(foodRows)}
+        ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb, updated_at = now()
+      `;
+    }
+
+    // Insert næringsverdier i sub-batches (store mengder)
+    const SUB_BATCH = 500;
+    for (let i = 0; i < nutRows.length; i += SUB_BATCH) {
+      const chunk = nutRows.slice(i, i + SUB_BATCH);
+      if (chunk.length > 0) {
         await db`
-          INSERT INTO food_nutrients (food_id, nutrient_id, value)
-          VALUES (${foodId}, ${n(c.nutrientId)}, ${n(c.quantity)})
+          INSERT INTO food_nutrients ${db(chunk)}
           ON CONFLICT (food_id, nutrient_id) DO UPDATE SET value = EXCLUDED.value
         `;
       }
-
-      count++;
     }
 
     await db.end();
-    return NextResponse.json({ ok: true, foods_synced: count });
+
+    const nextOffset = offset + limit;
+    const done = nextOffset >= total;
+
+    return NextResponse.json({
+      ok: true,
+      processed: batch.length,
+      offset,
+      total,
+      done,
+      next: done ? null : `/api/sync?secret=${secret}&offset=${nextOffset}&limit=${limit}`,
+    });
 
   } catch (err: any) {
     await db.end();
-    return NextResponse.json({ error: err.message, stack: err.stack?.split('\n').slice(0,5) }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
