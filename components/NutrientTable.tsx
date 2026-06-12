@@ -8,15 +8,15 @@ const NUTRIENT_GROUPS = [
   },
   {
     label: "Makronæringsstoffer",
-    ids: ["Prot", "Fat", "Choavldf", "Sugar", "Fibt", "Alc", "Watra"],
+    ids: ["Protein", "Fett", "Karbo", "Sukker", "Fiber", "Alkohol", "Vann"],
   },
   {
     label: "Fettsyrer",
-    ids: ["Fasat", "Fams", "Fapuf", "Fapun3", "Fapun6", "Fatrs"],
+    ids: ["Mettet", "Enumet", "Polyl", "Omega-3", "Omega-6", "Trans", "Kolest"],
   },
   {
     label: "Vitaminer",
-    ids: ["Vita", "Retol", "Carot", "Tocpha", "Thia", "Ribf", "Nia", "Panto", "Pyrdx", "Biot", "Folsum", "Vitb12", "Vitc", "Vitd", "Vitk"],
+    ids: ["Vit A", "Retinol", "B-karo", "Vit E", "Vit B1", "Vit B2", "Niacin", "NIAEQ", "Vit B6", "Folat", "Vit B12", "Vit C", "Vit D", "VITK1", "VITK2"],
   },
   {
     label: "Mineraler",
