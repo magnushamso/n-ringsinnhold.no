@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
     // 2. Næringsstoffer
     const nutrients = asArray(await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json()));
     for (const nut of nutrients) {
+      if (nut.id == null) continue;
       await db`
         INSERT INTO nutrients (id, name_nb, name_en, unit, decimal_places)
         VALUES (${n(nut.id)}, ${n(nut.name) ?? ""}, ${n(nut.nameEn)}, ${n(nut.unit)}, ${n(nut.decimalPlaces) ?? 1})
