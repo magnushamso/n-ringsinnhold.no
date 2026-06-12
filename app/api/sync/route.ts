@@ -37,13 +37,15 @@ export async function GET(req: NextRequest) {
     const groups = await fetch(`${BASE_URL}/food-groups.json`).then(r => r.json());
     const groupRows: any[] = [];
     function flatten(node: any, parentId: string | null = null) {
-      groupRows.push({
-        id: n(node.id),
-        parent_id: n(parentId),
-        name_nb: n(node.name) ?? "",
-        name_en: n(node.nameEn),
-      });
-      node.children?.forEach((c: any) => flatten(c, node.id));
+      if (node.id != null) {
+        groupRows.push({
+          id: n(node.id),
+          parent_id: n(parentId),
+          name_nb: n(node.name) ?? "",
+          name_en: n(node.nameEn),
+        });
+      }
+      node.children?.forEach((c: any) => flatten(c, node.id ?? parentId));
     }
     (Array.isArray(groups) ? groups : [groups]).forEach((g: any) => flatten(g));
 
