@@ -76,6 +76,14 @@ export async function GET(req: NextRequest) {
           ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb
         `;
       }
+
+      // Sikre at energi-definisjonene finnes (de er egne felt, ikke i nutrients.json)
+      await db`
+        INSERT INTO nutrients (id, name_nb, unit, decimal_places) VALUES
+          ('Enerc_kcal', 'Energi', 'kcal', 0),
+          ('Enerc', 'Energi', 'kJ', 0)
+        ON CONFLICT (id) DO NOTHING
+      `;
     }
 
     // Matvarer (med paginering)
@@ -104,6 +112,14 @@ export async function GET(req: NextRequest) {
       for (const c of f.constituents ?? []) {
         if (!c.nutrientId) continue;
         nutRows.push({ food_id: foodId, nutrient_id: n(c.nutrientId), value: n(c.quantity) });
+      }
+
+      // Kalorier og energi ligger som egne felt, ikke i constituents
+      if (f.calories?.quantity != null) {
+        nutRows.push({ food_id: foodId, nutrient_id: "Enerc_kcal", value: n(f.calories.quantity) });
+      }
+      if (f.energy?.quantity != null) {
+        nutRows.push({ food_id: foodId, nutrient_id: "Enerc", value: n(f.energy.quantity) });
       }
     }
 
