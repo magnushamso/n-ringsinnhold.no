@@ -21,9 +21,9 @@ export default async function FoodPage({ params }: Props) {
   if (!food) notFound();
 
   const kcal  = food.nutrients?.["Enerc_kcal"]?.value;
-  const prot  = food.nutrients?.["Prot"]?.value;
-  const fat   = food.nutrients?.["Fat"]?.value;
-  const carbs = food.nutrients?.["Choavldf"]?.value;
+  const prot  = food.nutrients?.["Protein"]?.value;
+  const fat   = food.nutrients?.["Fett"]?.value;
+  const carbs = food.nutrients?.["Karbo"]?.value;
 
   const jsonLd = {
     "@context": "https://schema.org",
