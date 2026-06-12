@@ -16,6 +16,17 @@ function n(val: any): any {
   return val === undefined ? null : val;
 }
 
+// Hent ut array fra respons, uansett om den er direkte array eller {key: [...]}
+function asArray(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    for (const val of Object.values(data)) {
+      if (Array.isArray(val)) return val;
+    }
+  }
+  return [];
+}
+
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
@@ -57,7 +68,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Næringsstoffer
-    const nutrients = await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json());
+    const nutrients = asArray(await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json()));
     for (const nut of nutrients) {
       await db`
         INSERT INTO nutrients (id, name_nb, name_en, unit, decimal_places)
@@ -67,7 +78,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Matvarer
-    const foods = await fetch(`${BASE_URL}/foods.json`).then(r => r.json());
+    const foods = asArray(await fetch(`${BASE_URL}/foods.json`).then(r => r.json()));
     let count = 0;
 
     for (const f of foods) {
