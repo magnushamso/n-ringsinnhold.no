@@ -70,10 +70,11 @@ export async function GET(req: NextRequest) {
     // 2. Næringsstoffer
     const nutrients = asArray(await fetch(`${BASE_URL}/nutrients.json`).then(r => r.json()));
     for (const nut of nutrients) {
-      if (nut.id == null) continue;
+      const nutId = n(nut.id ?? nut.nutrientId ?? nut.code);
+      if (nutId == null) continue;
       await db`
         INSERT INTO nutrients (id, name_nb, name_en, unit, decimal_places)
-        VALUES (${n(nut.id)}, ${n(nut.name) ?? ""}, ${n(nut.nameEn)}, ${n(nut.unit)}, ${n(nut.decimalPlaces) ?? 1})
+        VALUES (${nutId}, ${n(nut.name ?? nut.nutrientName) ?? ""}, ${n(nut.nameEn)}, ${n(nut.unit)}, ${n(nut.decimalPlaces) ?? 1})
         ON CONFLICT (id) DO UPDATE SET name_nb = EXCLUDED.name_nb
       `;
     }
@@ -83,19 +84,21 @@ export async function GET(req: NextRequest) {
     let count = 0;
 
     for (const f of foods) {
-      if (f.id == null) continue;
-      const slug = `${slugify(n(f.name) ?? "ukjent")}-${slugify(n(f.id) ?? String(count))}`;
-      
+      const foodId = n(f.id ?? f.foodId);
+      const foodName = n(f.name ?? f.foodName) ?? "";
+      if (foodId == null) continue;
+      const slug = `${slugify(foodName)}-${slugify(foodId)}`;
+
       await db`
         INSERT INTO foods (id, slug, name_nb, name_en, food_group_id, source, source_id)
         VALUES (
-          ${n(f.id)},
+          ${foodId},
           ${slug},
-          ${n(f.name) ?? ""},
+          ${foodName},
           ${n(f.nameEn)},
           ${n(f.foodGroupId)},
           ${"matvaretabellen"},
-          ${n(f.id)}
+          ${foodId}
         )
         ON CONFLICT (id) DO UPDATE SET
           name_nb = EXCLUDED.name_nb,
@@ -106,7 +109,7 @@ export async function GET(req: NextRequest) {
         if (!c.nutrientId) continue;
         await db`
           INSERT INTO food_nutrients (food_id, nutrient_id, value)
-          VALUES (${n(f.id)}, ${n(c.nutrientId)}, ${n(c.quantity)})
+          VALUES (${foodId}, ${n(c.nutrientId)}, ${n(c.quantity)})
           ON CONFLICT (food_id, nutrient_id) DO UPDATE SET value = EXCLUDED.value
         `;
       }
