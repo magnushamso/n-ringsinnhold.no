@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
     let count = 0;
 
     for (const f of foods) {
+      if (f.id == null) continue;
       const slug = `${slugify(n(f.name) ?? "ukjent")}-${slugify(n(f.id) ?? String(count))}`;
       
       await db`
