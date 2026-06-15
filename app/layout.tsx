@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: {
@@ -9,23 +10,14 @@ export const metadata: Metadata = {
   description:
     "Finn næringsinnhold i alle matvarer. Kalorier, protein, karbohydrater, fett, vitaminer og mineraler — basert på den norske matvaretabellen.",
   keywords: ["næringsinnhold", "kalorier", "matvaretabell", "protein", "karbohydrater"],
-  openGraph: {
-    type: "website",
-    locale: "nb_NO",
-    url: "https://naeringsinnhold.no",
-    siteName: "Næringsinnhold.no",
-  },
+  openGraph: { type: "website", locale: "nb_NO", url: "https://naeringsinnhold.no", siteName: "Næringsinnhold.no" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="nb">
       <body>
-        <nav className="site-nav">
-          <div className="inner">
-            <a href="/" className="logo">Næringsinnhold.no</a>
-          </div>
-        </nav>
+        <NavBar />
         {children}
       </body>
     </html>
