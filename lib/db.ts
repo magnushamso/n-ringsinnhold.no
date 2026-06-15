@@ -41,20 +41,27 @@ export interface FoodWithNutrients extends Food {
 // ── Søk ────────────────────────────────────────────────────────
 
 export async function searchFoods(query: string, limit = 20): Promise<Food[]> {
-  if (!query || query.trim().length < 2) return [];
+  if (!query || query.trim().length < 1) return [];
+
+  const q = query.trim();
 
   const results = await db`
     SELECT
       f.id, f.slug, f.name_nb, f.name_en,
       f.food_group_id, fg.name_nb AS food_group_name,
-      f.source, f.barcode, f.brand,
-      ts_rank(f.search_vector, plainto_tsquery('norwegian', ${query})) AS rank
+      f.source, f.barcode, f.brand
     FROM foods f
     LEFT JOIN food_groups fg ON fg.id = f.food_group_id
-    WHERE
-      f.search_vector @@ plainto_tsquery('norwegian', ${query})
-      OR f.name_nb ILIKE ${'%' + query + '%'}
-    ORDER BY rank DESC
+    WHERE f.name_nb ILIKE ${q + '%'}
+       OR f.name_nb ILIKE ${'% ' + q + '%'}
+       OR f.name_nb ILIKE ${'%' + q + '%'}
+    ORDER BY
+      CASE
+        WHEN f.name_nb ILIKE ${q + '%'} THEN 0
+        WHEN f.name_nb ILIKE ${'% ' + q + '%'} THEN 1
+        ELSE 2
+      END,
+      f.name_nb
     LIMIT ${limit}
   `;
 
