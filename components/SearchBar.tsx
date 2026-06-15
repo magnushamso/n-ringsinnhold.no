@@ -16,13 +16,13 @@ export default function SearchBar() {
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const router = useRouter();
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    clearTimeout(debounceRef.current);
 
-    if (query.trim().length < 2) {
+    if (query.trim().length < 1) {
       setResults([]);
       setOpen(false);
       return;
@@ -38,7 +38,7 @@ export default function SearchBar() {
       } finally {
         setLoading(false);
       }
-    }, 250);
+    }, 100);
   }, [query]);
 
   function handleSelect(slug: string) {
