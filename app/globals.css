@@ -236,3 +236,122 @@ nav.site-nav .logo { font-weight: 700; color: var(--green); text-decoration: non
   .nav-search { margin: 0 .75rem; }
   .add-panel { display: none; } /* vises under søk på mobil i fremtidig versjon */
 }
+
+/* ── Måltidstabell ── */
+.meal-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--surface);
+}
+
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+
+.meal-table th {
+  background: var(--green-light);
+  color: var(--green);
+  padding: .65rem .75rem;
+  text-align: left;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+.meal-table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.meal-table tbody tr:last-child td { border-bottom: none; }
+.meal-table tbody tr:hover { background: #faf9f7; }
+
+.meal-table tfoot td {
+  font-weight: 700;
+  background: var(--green-light);
+  border-top: 2px solid var(--border);
+  color: var(--green);
+}
+
+.col-name { min-width: 160px; }
+.col-qty  { min-width: 220px; }
+.col-nut  { min-width: 70px; text-align: right; }
+.col-del  { width: 36px; text-align: center; }
+.total-cell { color: var(--green) !important; }
+
+/* ── Næringsstoff-velger ── */
+.nutrient-picker {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.nutrient-picker-group {}
+.picker-group-label {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .6rem;
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+.picker-items {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding-left: .25rem;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .85rem;
+  cursor: pointer;
+}
+
+.picker-item input, .picker-group-label input {
+  accent-color: var(--green);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* ── Knapper ── */
+.btn-toggle-nutrients {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: .5rem 1rem;
+  font-size: .9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: border-color .15s;
+}
+.btn-toggle-nutrients:hover { border-color: var(--green); color: var(--green); }
+
+.btn-clear-meal {
+  background: none;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: .5rem 1rem;
+  font-size: .9rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: border-color .15s, color .15s;
+}
+.btn-clear-meal:hover { border-color: var(--accent); color: var(--accent); }
